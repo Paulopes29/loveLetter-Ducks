@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Love Letter - Version Canards</title>
+    <style>
+        :root {
+            --board-bg: #006400;
+            --player-bg: #f0e68c;
+            --card-width: 120px;
+            --card-height: 170px;
+            --font-family: 'Arial', sans-serif;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: #333;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1 {
+            color: var(--player-bg);
+        }
+
+        #game-board {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            background-color: var(--board-bg);
+            padding: 20px;
+            border-radius: 10px;
+            border: 5px solid #556B2F;
+            width: 95vw;
+            max-width: 1000px;
+        }
+
+        .player-areas {
+            display: flex;
+            justify-content: space-around;
+            gap: 20px;
+        }
+
+        .player-area {
+            background-color: var(--player-bg);
+            color: #333;
+            padding: 15px;
+            border-radius: 8px;
+            width: 45%;
+            min-height: 250px;
+            border: 3px solid #DAA520;
+            transition: all 0.3s ease;
+        }
+
+        .player-area.current-player {
+            box-shadow: 0 0 20px yellow;
+            transform: scale(1.02);
+        }
+
+        .player-area.eliminated {
+            opacity: 0.5;
+            background-color: #ccc;
+        }
+
+        .player-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .player-name {
+            font-size: 1.5em;
+            font-weight: bold;
+        }
+
+        .score-tokens {
+            font-size: 1.2em;
+        }
+
+        .hand-area {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+            min-height: var(--card-height);
+            align-items: center;
+            justify-content: center;
+        }
+
+        .discard-pile {
+            margin-top: 15px;
+            padding-top: 10px;
+            border-top: 1px dashed #333;
+        }
+
+        .discard-pile h4 {
+            margin: 0 0 5px 0;
+        }
+
+        .discard-cards {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+
+        .center-area {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 40px;
+        }
+
+        .deck-area {
+            text-align: center;
+        }
+
+        .card {
+            width: var(--card-width);
+            height: var(--card-height);
+            border: 2px solid #000;
+            border-radius: 10px;
+            background-color: #fff;
+            background-size: cover;
+            background-position: center;
+            color: #000;
+            position: relative;
+            box-shadow: 3px 3px 5px rgba(0, 0, 0, 0.3);
+        }
+
+        .card.playable {
+            cursor: pointer;
+            border-color: #ff0;
+            box-shadow: 0 0 15px #ff0;
+        }
+
+        .card.playable:hover {
+            transform: translateY(-5px);
+        }
+
+        .card-back {
+            background-image: url('images/card-back.png');
+            /* Assurez-vous d'avoir une image pour le dos des cartes */
+        }
+
+        .card-info {
+            position: absolute;
+            bottom: 5px;
+            left: 5px;
+            right: 5px;
+            background-color: rgba(255, 255, 255, 0.8);
+            padding: 3px;
+            border-radius: 5px;
+            text-align: center;
+            font-size: 0.8em;
+            font-weight: bold;
+        }
+
+        .card-value {
+            position: absolute;
+            top: 5px;
+            left: 8px;
+            font-size: 1.2em;
+            font-weight: bold;
+            background-color: white;
+            border-radius: 50%;
+            width: 25px;
+            height: 25px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .discard-cards .card {
+            width: calc(var(--card-width) / 2);
+            height: calc(var(--card-height) / 2);
+        }
+
+        .discard-cards .card-info {
+            display: none;
+        }
+
+        .discard-cards .card-value {
+            font-size: 0.8em;
+            width: 15px;
+            height: 15px;
+            top: 2px;
+            left: 2px;
+        }
+
+        .log-area {
+            background-color: #222;
+            padding: 10px;
+            border-radius: 5px;
+            height: 100px;
+            overflow-y: auto;
+            border: 2px solid #444;
+        }
+
+        #log-messages p {
+            margin: 0 0 5px 0;
+            font-size: 0.9em;
+        }
+
+        /* Modal for prompts */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: var(--player-bg);
+            color: #333;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .modal-content button,
+        .modal-content select {
+            margin: 5px;
+            padding: 8px 12px;
+            font-size: 1em;
+        }
+
+        #game-over-modal .modal-content {
+            font-size: 1.5em;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>Love Letter - Canards Edition</h1>
+
+    <div id="game-board">
+        <div class="player-areas">
+            <div id="player-0-area" class="player-area">
+                <div class="player-header">
+                    <span class="player-name" id="player-0-name">Joueur 1</span>
+                    <span class="score-tokens" id="player-0-score">Jetons: 0</span>
+                </div>
+                <div class="hand-area" id="player-0-hand"></div>
+                <div class="discard-pile">
+                    <h4>Défausse:</h4>
+                    <div class="discard-cards" id="player-0-discard"></div>
+                </div>
+            </div>
+            <div id="player-1-area" class="player-area">
+                <div class="player-header">
+                    <span class="player-name" id="player-1-name">Joueur 2</span>
+                    <span class="score-tokens" id="player-1-score">Jetons: 0</span>
+                </div>
+                <div class="hand-area" id="player-1-hand"></div>
+                <div class="discard-pile">
+                    <h4>Défausse:</h4>
+                    <div class="discard-cards" id="player-1-discard"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="center-area">
+            <div class="deck-area">
+                <div class="card card-back"></div>
+                <p>Pioche: <span id="deck-count">0</span></p>
+            </div>
+        </div>
+
+        <div class="log-area">
+            <div id="log-messages"></div>
+        </div>
+    </div>
+
+    <!-- Modal for Arrache (Garde) -->
+    <div id="arrache-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h3>Devinez la carte de l'adversaire !</h3>
+            <select id="arrache-guess"></select>
+            <button id="arrache-confirm">Confirmer</button>
+        </div>
+    </div>
+
+    <!-- Modal for MangeMerde (Prêtre) -->
+    <div id="mangemerde-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h3>La carte de l'adversaire est :</h3>
+            <div id="mangemerde-card-view"></div>
+            <button id="mangemerde-close">OK</button>
+        </div>
+    </div>
+
+    <!-- Modal for Game Over -->
+    <div id="game-over-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h2 id="game-over-message"></h2>
+            <button id="play-again-button">Rejouer</button>
+        </div>
+    </div>
+
+    <script>
+        const game = {
+            // Définition des cartes avec les noms de tes canards
+            CARDS_DATA: {
+                'arrache': { value: 1, count: 5, name: 'arrache', role: 'Garde' },
+                'le MangeMerde': { value: 2, count: 2, name: 'le MangeMerde', role: 'Prêtre' },
+                'le TetGlant': { value: 3, count: 2, name: 'le TetGlant', role: 'Baron' },
+                'CraneDoeuf': { value: 4, count: 2, name: 'CraneDoeuf', role: 'Servante' },
+                'KarateKid': { value: 5, count: 2, name: 'KarateKid', role: 'Prince' },
+                'AgentSpecial': { value: 6, count: 1, name: 'AgentSpecial', role: 'Roi' },
+                'LeBronJames': { value: 7, count: 1, name: 'LeBronJames', role: 'Comtesse' },
+                'Gaypride': { value: 8, count: 1, name: 'Gaypride', role: 'Princesse' }
+            },
+
+            // État du jeu
+            state: {},
+
+            // Initialisation du jeu
+            init() {
+                this.state = {
+                    players: [
+                        { name: 'Joueur 1', score: 0, hand: [], discard: [], isProtected: false, isEliminated: false },
+                        { name: 'Joueur 2', score: 0, hand: [], discard: [], isProtected: false, isEliminated: false }
+                    ],
+                    deck: [],
+                    currentPlayerIndex: 0,
+                    isRoundOver: false,
+                    log: [],
+                };
+                this.startNewRound();
+                this.addEventListeners();
+            },
+
+            // Démarrer une nouvelle manche
+            startNewRound() {
+                this.state.isRoundOver = false;
+                this.state.deck = this.createDeck();
+                this.shuffle(this.state.deck);
+
+                // Écarter une carte
+                this.state.deck.pop();
+
+                // Réinitialiser les joueurs
+                this.state.players.forEach(p => {
+                    p.hand = [];
+                    p.discard = [];
+                    p.isProtected = false;
+                    p.isEliminated = false;
+                });
+
+                // Distribuer les cartes
+                this.state.players.forEach(p => {
+                    p.hand.push(this.state.deck.pop());
+                });
+
+                this.state.currentPlayerIndex = Math.floor(Math.random() * this.state.players.length);
+                this.updateLog("Nouvelle manche !");
+                this.startTurn();
+            },
+
+            // Commence le tour d'un joueur
+            startTurn() {
+                if (this.state.isRoundOver) return;
+
+                const player = this.state.players[this.state.currentPlayerIndex];
+                if (player.isEliminated) {
+                    this.nextPlayer();
+                    return;
+                }
+
+                player.isProtected = false; // La protection de la servante se termine
+
+                if (this.state.deck.length > 0) {
+                    const newCard = this.state.deck.pop();
+                    player.hand.push(newCard);
+                    this.updateLog(`${player.name} pioche une carte.`);
+                } else {
+                    this.endRound(); // Pioche vide, fin de manche
+                    return;
+                }
+
+                // Règle de la Comtesse
+                const hasComtesse = player.hand.includes('LeBronJames');
+                const hasKingOrPrince = player.hand.includes('AgentSpecial') || player.hand.includes('KarateKid');
+                if (hasComtesse && hasKingOrPrince) {
+                    this.updateLog(`${player.name} doit jouer la Comtesse (LeBronJames) !`);
+                    // On force le jeu de la comtesse
+                    const cardIndex = player.hand.indexOf('LeBronJames');
+                    const cardToPlay = player.hand.splice(cardIndex, 1)[0];
+                    this.playCard(player, cardToPlay);
+                }
+
+                this.render();
+            },
+
+            // Logique pour jouer une carte
+            playCard(player, cardName) {
+                player.discard.push(cardName);
+                this.updateLog(`${player.name} joue ${cardName} (${this.CARDS_DATA[cardName].role}).`);
+
+                // Si la princesse est jouée, le joueur perd
+                if (cardName === 'Gaypride') {
+                    this.eliminatePlayer(this.state.currentPlayerIndex, "a défaussé la Princesse !");
+                    this.nextPlayer();
+                    return;
+                }
+
+                const opponentIndex = 1 - this.state.currentPlayerIndex;
+                const opponent = this.state.players[opponentIndex];
+
+                // Si l'adversaire est protégé, la plupart des effets sont annulés
+                if (opponent.isProtected && cardName !== 'KarateKid') {
+                    this.updateLog(`${opponent.name} est protégé par CraneDoeuf. L'effet est annulé.`);
+                    this.nextPlayer();
+                    return;
+                }
+
+                // Logique de chaque carte
+                switch (cardName) {
+                    case 'arrache':
+                        this.showArracheModal();
+                        break;
+                    case 'le MangeMerde':
+                        this.showMangemerdeModal(opponent.hand[0]);
+                        // On ne passe pas au joueur suivant tout de suite, on attend la fermeture du modal
+                        break;
+                    case 'le TetGlant':
+                        const playerCardValue = this.CARDS_DATA[player.hand[0]].value;
+                        const opponentCardValue = this.CARDS_DATA[opponent.hand[0]].value;
+                        this.updateLog(`${player.name} (carte ${playerCardValue}) défie ${opponent.name} (carte ${opponentCardValue}).`);
+                        if (playerCardValue > opponentCardValue) {
+                            this.eliminatePlayer(opponentIndex, "avait une carte plus faible.");
+                        } else if (opponentCardValue > playerCardValue) {
+                            this.eliminatePlayer(this.state.currentPlayerIndex, "avait une carte plus faible.");
+                        } else {
+                            this.updateLog("Égalité ! Personne n'est éliminé.");
+                        }
+                        this.nextPlayer();
+                        break;
+                    case 'CraneDoeuf':
+                        player.isProtected = true;
+                        this.updateLog(`${player.name} est maintenant protégé jusqu'à son prochain tour.`);
+                        this.nextPlayer();
+                        break;
+                    case 'KarateKid':
+                        // Le Prince peut se cibler lui-même, mais ici on simplifie pour 2 joueurs
+                        this.updateLog(`${opponent.name} doit défausser sa main.`);
+                        const discardedCard = opponent.hand.pop();
+                        opponent.discard.push(discardedCard);
+                        if (discardedCard === 'Gaypride') {
+                            this.eliminatePlayer(opponentIndex, "a été forcé de défausser la Princesse !");
+                        } else if (this.state.deck.length > 0) {
+                            opponent.hand.push(this.state.deck.pop());
+                        }
+                        this.nextPlayer();
+                        break;
+                    case 'AgentSpecial':
+                        this.updateLog(`${player.name} échange sa main avec ${opponent.name}.`);
+                        [player.hand[0], opponent.hand[0]] = [opponent.hand[0], player.hand[0]];
+                        this.nextPlayer();
+                        break;
+                    case 'LeBronJames':
+                        // La Comtesse n'a pas d'effet quand elle est jouée.
+                        this.nextPlayer();
+                        break;
+                }
+            },
+
+            // Passe au joueur suivant
+            nextPlayer() {
+                if (this.checkRoundOver()) return;
+                this.state.currentPlayerIndex = 1 - this.state.currentPlayerIndex;
+                this.startTurn();
+            },
+
+            // Élimine un joueur
+            eliminatePlayer(playerIndex, reason) {
+                const player = this.state.players[playerIndex];
+                player.isEliminated = true;
+                this.updateLog(`${player.name} est éliminé ! (${reason})`);
+                this.render();
+            },
+
+            // Vérifie si la manche est terminée
+            checkRoundOver() {
+                const remainingPlayers = this.state.players.filter(p => !p.isEliminated);
+                if (remainingPlayers.length <= 1) {
+                    this.endRound(remainingPlayers[0]);
+                    return true;
+                }
+                if (this.state.deck.length === 0) {
+                    this.endRound();
+                    return true;
+                }
+                return false;
+            },
+
+            // Termine la manche et détermine le gagnant
+            endRound(winner = null) {
+                this.state.isRoundOver = true;
+                if (!winner) {
+                    const remainingPlayers = this.state.players.filter(p => !p.isEliminated);
+                    if (remainingPlayers.length > 1) {
+                        const p1CardValue = this.CARDS_DATA[remainingPlayers[0].hand[0]].value;
+                        const p2CardValue = this.CARDS_DATA[remainingPlayers[1].hand[0]].value;
+                        if (p1CardValue > p2CardValue) {
+                            winner = remainingPlayers[0];
+                        } else if (p2CardValue > p1CardValue) {
+                            winner = remainingPlayers[1];
+                        } else {
+                            // En cas d'égalité, on regarde la somme des défausses
+                            const p1DiscardSum = remainingPlayers[0].discard.reduce((sum, card) => sum + this.CARDS_DATA[card].value, 0);
+                            const p2DiscardSum = remainingPlayers[1].discard.reduce((sum, card) => sum + this.CARDS_DATA[card].value, 0);
+                            winner = p1DiscardSum > p2DiscardSum ? remainingPlayers[0] : remainingPlayers[1];
+                        }
+                        this.updateLog(`La pioche est vide ! ${remainingPlayers[0].name} a ${remainingPlayers[0].hand[0]}, ${remainingPlayers[1].name} a ${remainingPlayers[1].hand[0]}.`);
+                    } else {
+                        winner = remainingPlayers[0];
+                    }
+                }
+
+                if (winner) {
+                    winner.score++;
+                    this.updateLog(`${winner.name} gagne la manche !`);
+                    this.render();
+
+                    // Vérifier si la partie est gagnée (ex: au bout de 4 jetons)
+                    if (winner.score >= 4) {
+                        this.showGameOverModal(`${winner.name} a gagné la partie !`);
+                    } else {
+                        setTimeout(() => this.startNewRound(), 3000);
+                    }
+                }
+            },
+
+            // --- Fonctions d'affichage et d'interaction ---
+
+            render() {
+                // Met à jour l'affichage de tout le jeu
+                document.getElementById('deck-count').textContent = this.state.deck.length;
+
+                this.state.players.forEach((player, index) => {
+                    const playerArea = document.getElementById(`player-${index}-area`);
+                    playerArea.className = 'player-area';
+                    if (index === this.state.currentPlayerIndex && !this.state.isRoundOver) {
+                        playerArea.classList.add('current-player');
+                    }
+                    if (player.isEliminated) {
+                        playerArea.classList.add('eliminated');
+                    }
+
+                    document.getElementById(`player-${index}-score`).textContent = `Jetons: ${player.score}`;
+
+                    const handArea = document.getElementById(`player-${index}-hand`);
+                    handArea.innerHTML = '';
+                    player.hand.forEach(cardName => {
+                        const isPlayable = (index === this.state.currentPlayerIndex && player.hand.length > 1);
+                        const cardDiv = this.createCardDiv(cardName, isPlayable);
+                        if (isPlayable) {
+                            cardDiv.addEventListener('click', () => {
+                                const cardIndex = player.hand.indexOf(cardName);
+                                const cardToPlay = player.hand.splice(cardIndex, 1)[0];
+                                this.playCard(player, cardToPlay);
+                            });
+                        }
+                        handArea.appendChild(cardDiv);
+                    });
+
+                    const discardArea = document.getElementById(`player-${index}-discard`);
+                    discardArea.innerHTML = '';
+                    player.discard.forEach(cardName => {
+                        discardArea.appendChild(this.createCardDiv(cardName, false));
+                    });
+                });
+
+                const logMessages = document.getElementById('log-messages');
+                logMessages.innerHTML = this.state.log.map(msg => `<p>${msg}</p>`).join('');
+                logMessages.scrollTop = logMessages.scrollHeight;
+            },
+
+            createCardDiv(cardName, isPlayable) {
+                const cardData = this.CARDS_DATA[cardName];
+                const cardDiv = document.createElement('div');
+                cardDiv.className = 'card';
+                if (isPlayable) cardDiv.classList.add('playable');
+                // Utilise le nom du canard pour le nom du fichier image, en minuscule
+                cardDiv.style.backgroundImage = `url('images/${cardName.toLowerCase().replace(/ /g, '')}.png')`;
+                cardDiv.innerHTML = `
+            <div class="card-value">${cardData.value}</div>
+            <div class="card-info">${cardData.name}</div>
+        `;
+                return cardDiv;
+            },
+
+            updateLog(message) {
+                this.state.log.unshift(message);
+                if (this.state.log.length > 20) this.state.log.pop();
+                this.render();
+            },
+
+            // --- Modals ---
+            showArracheModal() {
+                const modal = document.getElementById('arrache-modal');
+                const select = document.getElementById('arrache-guess');
+                select.innerHTML = '';
+                Object.values(this.CARDS_DATA)
+                    .filter(card => card.value !== 1) // On ne peut pas deviner un autre Garde
+                    .sort((a, b) => a.value - b.value)
+                    .forEach(card => {
+                        const option = document.createElement('option');
+                        option.value = card.name;
+                        option.textContent = `${card.name} (${card.value})`;
+                        select.appendChild(option);
+                    });
+                modal.style.display = 'flex';
+            },
+
+            handleArracheGuess() {
+                const guess = document.getElementById('arrache-guess').value;
+                const opponent = this.state.players[1 - this.state.currentPlayerIndex];
+                this.updateLog(`${this.state.players[this.state.currentPlayerIndex].name} devine que ${opponent.name} a un ${guess}.`);
+                if (opponent.hand[0] === guess) {
+                    this.updateLog("C'est correct !");
+                    this.eliminatePlayer(1 - this.state.currentPlayerIndex, "sa carte a été devinée.");
+                } else {
+                    this.updateLog("C'est raté !");
+                }
+                document.getElementById('arrache-modal').style.display = 'none';
+                this.nextPlayer();
+            },
+
+            showMangemerdeModal(cardName) {
+                const modal = document.getElementById('mangemerde-modal');
+                const cardView = document.getElementById('mangemerde-card-view');
+                cardView.innerHTML = '';
+                cardView.appendChild(this.createCardDiv(cardName, false));
+                modal.style.display = 'flex';
+            },
+
+            showGameOverModal(message) {
+                document.getElementById('game-over-message').textContent = message;
+                document.getElementById('game-over-modal').style.display = 'flex';
+            },
+
+            // --- Utilitaires ---
+            createDeck() {
+                const deck = [];
+                for (const cardName in this.CARDS_DATA) {
+                    for (let i = 0; i < this.CARDS_DATA[cardName].count; i++) {
+                        deck.push(cardName);
+                    }
+                }
+                return deck;
+            },
+
+            shuffle(array) {
+                for (let i = array.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [array[i], array[j]] = [array[j], array[i]];
+                }
+            },
+
+            addEventListeners() {
+                document.getElementById('arrache-confirm').addEventListener('click', () => this.handleArracheGuess());
+                document.getElementById('mangemerde-close').addEventListener('click', () => {
+                    document.getElementById('mangemerde-modal').style.display = 'none';
+                    this.nextPlayer();
+                });
+                document.getElementById('play-again-button').addEventListener('click', () => {
+                    document.getElementById('game-over-modal').style.display = 'none';
+                    this.init();
+                });
+            }
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            game.init();
+        });
+
+    </script>
+</body>
+
+</html>
